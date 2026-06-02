@@ -41,3 +41,14 @@ DEFAULT_REDIS_URL = "redis://:santa@localhost:6379/0"
 # ── Custom Headers ────────────────────────────────────────────────────────────
 HEADER_X_WORKER_PID = "X-Worker-PID"
 HEADER_X_PROCESS_TIME_MS = "X-Process-Time-Ms"
+
+# ── Database Connection Pool Configuration ────────────────────────────────────
+DB_POOL_MIN_SIZE = 2
+DB_POOL_MAX_SIZE_WEB = 10
+DB_POOL_MAX_SIZE_WORKER = 8
+DB_POOL_COMMAND_TIMEOUT = 60
+
+# ── Redis Connection Configuration ───────────────────────────────────────────
+REDIS_POOL_MAX_CONNECTIONS = 10
+REDIS_SOCKET_CONNECT_TIMEOUT = 5
+REDIS_SOCKET_TIMEOUT = 5

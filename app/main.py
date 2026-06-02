@@ -27,6 +27,9 @@ from pydantic import BaseModel
 
 from app.cache import close_redis, create_redis, get_redis
 from app.constants import (
+    DB_POOL_COMMAND_TIMEOUT,
+    DB_POOL_MAX_SIZE_WEB,
+    DB_POOL_MIN_SIZE,
     DEFAULT_APP_ENV,
     DEFAULT_DATABASE_URL,
     DEFAULT_LIMIT,
@@ -75,9 +78,9 @@ async def lifespan(app: FastAPI):
     )
     pool: asyncpg.Pool = await asyncpg.create_pool(
         db_url,
-        min_size=2,
-        max_size=10,
-        command_timeout=60,
+        min_size=DB_POOL_MIN_SIZE,
+        max_size=DB_POOL_MAX_SIZE_WEB,
+        command_timeout=DB_POOL_COMMAND_TIMEOUT,
     )
     app.state.pool = pool
     app.state.pid = pid

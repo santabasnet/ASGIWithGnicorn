@@ -26,6 +26,9 @@ from pgqueuer import PgQueuer
 from pgqueuer.models import Context, Job, Schedule
 
 from app.constants import (
+    DB_POOL_COMMAND_TIMEOUT,
+    DB_POOL_MAX_SIZE_WORKER,
+    DB_POOL_MIN_SIZE,
     DEFAULT_DATABASE_URL,
     DEFAULT_REDIS_URL,
     ENTRYPOINT_EXPORT_REPORT,
@@ -37,6 +40,9 @@ from app.constants import (
     KEY_MESSAGES,
     KEY_ROLE,
     KEY_SESSION_ID,
+    REDIS_POOL_MAX_CONNECTIONS,
+    REDIS_SOCKET_CONNECT_TIMEOUT,
+    REDIS_SOCKET_TIMEOUT,
     ROLE_ASSISTANT,
     ROLE_USER,
 )
@@ -65,17 +71,17 @@ async def main():
 
     pool: asyncpg.Pool = await asyncpg.create_pool(
         database_url,
-        min_size=2,
-        max_size=8,
-        command_timeout=60,
+        min_size=DB_POOL_MIN_SIZE,
+        max_size=DB_POOL_MAX_SIZE_WORKER,
+        command_timeout=DB_POOL_COMMAND_TIMEOUT,
     )
     redis_client: aioredis.Redis = aioredis.from_url(
         redis_url,
         encoding="utf-8",
         decode_responses=True,
-        max_connections=10,
-        socket_connect_timeout=5,
-        socket_timeout=5,
+        max_connections=REDIS_POOL_MAX_CONNECTIONS,
+        socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+        socket_timeout=REDIS_SOCKET_TIMEOUT,
     )
     pgq_conn: asyncpg.Connection = await asyncpg.connect(database_url)
 
