@@ -44,7 +44,7 @@ services:
       POSTGRES_PASSWORD: santa
       POSTGRES_DB: santa
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U santa -d santa"]
       interval: 5s
