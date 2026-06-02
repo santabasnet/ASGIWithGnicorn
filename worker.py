@@ -25,6 +25,21 @@ import redis.asyncio as aioredis
 from pgqueuer import PgQueuer
 from pgqueuer.models import Context, Job, Schedule
 
+from app.constants import (
+    DEFAULT_DATABASE_URL,
+    DEFAULT_REDIS_URL,
+    ENTRYPOINT_EXPORT_REPORT,
+    ENTRYPOINT_GENERATE_REPLY,
+    ENTRYPOINT_HEARTBEAT_LOG,
+    ENTRYPOINT_SEND_EMAIL,
+    ENTRYPOINT_STRESS_CPU,
+    KEY_CONTENT,
+    KEY_MESSAGES,
+    KEY_ROLE,
+    KEY_SESSION_ID,
+    ROLE_ASSISTANT,
+    ROLE_USER,
+)
 from app.sessions import append_message, get_session
 from scripts.cpu_stress import run_stress
 
@@ -44,9 +59,9 @@ async def main():
     database_url = (
         os.environ.get("DATABASE_URL")
         or os.environ.get("PG_DSN")
-        or "postgresql://santa:santa@localhost:5432/santa"
+        or DEFAULT_DATABASE_URL
     )
-    redis_url = os.environ.get("REDIS_URL", "redis://:santa@localhost:6379/0")
+    redis_url = os.environ.get("REDIS_URL", DEFAULT_REDIS_URL)
 
     pool: asyncpg.Pool = await asyncpg.create_pool(
         database_url,
@@ -69,7 +84,7 @@ async def main():
 
     # ── Job handlers ──────────────────────────────────────────────────────────
 
-    @pgq.entrypoint("generate_reply", accepts_context=True)
+    @pgq.entrypoint(ENTRYPOINT_GENERATE_REPLY, accepts_context=True)
     async def generate_reply(job: Job, ctx: Context) -> None:
         """
         Generate an AI reply and append it to the chat session.
@@ -78,10 +93,10 @@ async def main():
         """
         redis: aioredis.Redis = ctx.resources["redis"]
         data = json.loads(job.payload or b"{}")
-        session_id: str = data.get("session_id", "")
+        session_id: str = data.get(KEY_SESSION_ID, "")
 
         if not session_id:
-            print(f"[generate_reply] missing session_id — payload: {data}")
+            print(f"[{ENTRYPOINT_GENERATE_REPLY}] missing {KEY_SESSION_ID} — payload: {data}")
             return
 
         session = await get_session(redis, session_id)
@@ -93,9 +108,9 @@ async def main():
 
         last_user_msg = next(
             (
-                m["content"]
-                for m in reversed(session.get("messages", []))
-                if m["role"] == "user"
+                m[KEY_CONTENT]
+                for m in reversed(session.get(KEY_MESSAGES, []))
+                if m[KEY_ROLE] == ROLE_USER
             ),
             "",
         )
@@ -103,16 +118,16 @@ async def main():
         # Replace with a real LLM call, e.g. await call_openai(session["messages"])
         reply = f"[mock reply to: '{last_user_msg}']"
 
-        await append_message(redis, session_id, "assistant", reply)
-        print(f"[generate_reply] session={session_id} reply appended (pid={pid})")
+        await append_message(redis, session_id, ROLE_ASSISTANT, reply)
+        print(f"[{ENTRYPOINT_GENERATE_REPLY}] session={session_id} reply appended (pid={pid})")
 
-    @pgq.entrypoint("send_email")
+    @pgq.entrypoint(ENTRYPOINT_SEND_EMAIL)
     async def send_email(job: Job) -> None:
         """Payload: {"to": "...", "subject": "...", "body": "..."}"""
         data = json.loads(job.payload or b"{}")
         print(f"[send_email] → {data.get('to')} | {data.get('subject')} (pid={pid})")
 
-    @pgq.entrypoint("export_report")
+    @pgq.entrypoint(ENTRYPOINT_EXPORT_REPORT)
     async def export_report(job: Job) -> None:
         """Payload: {"report_id": "...", "format": "csv|json"}"""
         data = json.loads(job.payload or b"{}")
@@ -120,7 +135,7 @@ async def main():
             f"[export_report] id={data.get('report_id')} fmt={data.get('format')} (pid={pid})"
         )
 
-    @pgq.entrypoint("stress_cpu")
+    @pgq.entrypoint(ENTRYPOINT_STRESS_CPU)
     async def stress_cpu(job: Job) -> None:
         """Payload: {"duration": 15}"""
         data = json.loads(job.payload or b"{}")
@@ -132,7 +147,7 @@ async def main():
         await asyncio.to_thread(run_stress, duration)
         print(f"[stress_cpu] CPU stress test finished (pid={pid})")
 
-    @pgq.schedule("heartbeat_log", "* * * * *")
+    @pgq.schedule(ENTRYPOINT_HEARTBEAT_LOG, "* * * * *")
     async def heartbeat_log(schedule: Schedule) -> None:
         print(f"[heartbeat] worker alive (pid={pid})")
 

@@ -26,20 +26,19 @@ from typing import Any
 import redis.asyncio as aioredis
 
 from app.cache import SESSION_TTL
-
-# ── Constants ─────────────────────────────────────────────────────────────────
-KEY_SESSION_ID = "session_id"
-KEY_USER_ID = "user_id"
-KEY_MESSAGES = "messages"
-KEY_METADATA = "metadata"
-KEY_CREATED_AT = "created_at"
-KEY_UPDATED_AT = "updated_at"
-KEY_ROLE = "role"
-KEY_CONTENT = "content"
-KEY_TS = "ts"
-
-DEFAULT_LIMIT = 20
-DEFAULT_OFFSET = 0
+from app.constants import (
+    DEFAULT_LIMIT,
+    DEFAULT_OFFSET,
+    KEY_CONTENT,
+    KEY_CREATED_AT,
+    KEY_MESSAGES,
+    KEY_METADATA,
+    KEY_ROLE,
+    KEY_SESSION_ID,
+    KEY_TS,
+    KEY_UPDATED_AT,
+    KEY_USER_ID,
+)
 
 
 # ── Key helpers ───────────────────────────────────────────────────────────────

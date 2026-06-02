@@ -26,9 +26,21 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from app.cache import close_redis, create_redis, get_redis
-from app.sessions import (
+from app.constants import (
+    DEFAULT_APP_ENV,
+    DEFAULT_DATABASE_URL,
     DEFAULT_LIMIT,
     DEFAULT_OFFSET,
+    ENTRYPOINT_GENERATE_REPLY,
+    HEADER_X_PROCESS_TIME_MS,
+    HEADER_X_WORKER_PID,
+    KEY_CONTENT,
+    KEY_LAST_ROLE,
+    KEY_ROLE,
+    KEY_SESSION_ID,
+    ROLE_USER,
+)
+from app.sessions import (
     append_message,
     create_session,
     delete_session,
@@ -59,7 +71,7 @@ async def lifespan(app: FastAPI):
     db_url = (
         os.environ.get("DATABASE_URL")
         or os.environ.get("PG_DSN")
-        or "postgresql://santa:santa@localhost:5432/santa"
+        or DEFAULT_DATABASE_URL
     )
     pool: asyncpg.Pool = await asyncpg.create_pool(
         db_url,
@@ -94,8 +106,8 @@ app = FastAPI(
 async def add_server_headers(request: Request, call_next):
     t0 = time.perf_counter()
     response = await call_next(request)
-    response.headers["X-Worker-PID"] = str(os.getpid())
-    response.headers["X-Process-Time-Ms"] = f"{(time.perf_counter() - t0) * 1000:.2f}"
+    response.headers[HEADER_X_WORKER_PID] = str(os.getpid())
+    response.headers[HEADER_X_PROCESS_TIME_MS] = f"{(time.perf_counter() - t0) * 1000:.2f}"
     return response
 
 
@@ -126,7 +138,7 @@ async def root():
 async def info():
     return {
         "worker_pid": os.getpid(),
-        "env": os.environ.get("APP_ENV", "development"),
+        "env": os.environ.get("APP_ENV", DEFAULT_APP_ENV),
     }
 
 
@@ -141,7 +153,7 @@ class CreateSessionRequest(BaseModel):
 
 
 class MessageRequest(BaseModel):
-    role: str = "user"  # "user" | "assistant" | "system"
+    role: str = ROLE_USER  # "user" | "assistant" | "system"
     content: str
 
 
@@ -185,13 +197,13 @@ async def add_message(
     if updated is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    payload = json.dumps({"session_id": session_id, "last_role": body.role}).encode()
-    await queries.enqueue(["generate_reply"], [payload], [0])
+    payload = json.dumps({KEY_SESSION_ID: session_id, KEY_LAST_ROLE: body.role}).encode()
+    await queries.enqueue([ENTRYPOINT_GENERATE_REPLY], [payload], [0])
 
     return {
-        "session_id": session_id,
-        "appended": {"role": body.role, "content": body.content},
-        "job": "generate_reply queued",
+        KEY_SESSION_ID: session_id,
+        "appended": {KEY_ROLE: body.role, KEY_CONTENT: body.content},
+        "job": f"{ENTRYPOINT_GENERATE_REPLY} queued",
         "worker_pid": os.getpid(),
     }
 
