@@ -16,7 +16,7 @@ services:
 
   # ── Redis ──────────────────────────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: redis:alpine
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -35,7 +35,7 @@ services:
 
   # ── PostgreSQL (pgqueuer job table) ────────────────────────────────────────
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     ports:
       - "5432:5432"
