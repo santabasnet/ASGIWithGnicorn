@@ -35,6 +35,40 @@ AI reply generation is slow. Instead of blocking the HTTP response, the web work
 
 ---
 
+## Worker Process Allocation & Math
+
+To ensure consistent performance under heavy loads (such as background CPU-stress workloads or concurrent LLM reasoning tasks), the project enforces a strict **60/40 CPU partitioning system** between the FastAPI REST API and pgqueuer background worker processes.
+
+### 📐 The Allocation Formulas
+For a system with a total count of CPU cores $C$:
+
+1. **Web Workers ($W_{\text{web}}$)** (60% of CPU cores):
+   $$W_{\text{web}} = \max(1, \text{round}(C \times 0.6))$$
+   *Allocated to Gunicorn's `UvicornWorker` processes. Each worker handles high-concurrency async I/O requests.*
+
+2. **Job Workers ($W_{\text{job}}$)** (40% of CPU cores):
+   $$W_{\text{job}} = \max(1, \text{round}(C \times 0.4))$$
+   *Allocated to pgqueuer background job consumer processes. These run computationally heavy or slow tasks.*
+
+### 📊 Allocation Reference Table
+
+| Total Cores ($C$) | Web Workers ($W_{\text{web}}$) | Job Workers ($W_{\text{job}}$) | Split Strategy Rationale |
+| :---: | :---: | :---: | :--- |
+| **1** | 1 | 1 | Basic concurrent execution of web routes and workers. |
+| **2** | 1 | 1 | Isolated single core for web requests and single core for background worker. |
+| **4** | 2 | 2 | Balance between active API endpoints and parallel task queues. |
+| **8** | 5 | 3 | High-throughput API server with robust background processing capacity. |
+| **16** | 10 | 6 | Massively concurrent API cluster with dedicated worker scaling. |
+
+### 🧠 Architectural Rationale
+- **Prevention of Starvation**: Under maximum CPU utilization (e.g., executing the `/jobs/enqueue` CPU stress job), the background pgqueuer processes will exhaust their assigned $W_{\text{job}}$ threads or processes. Because the remaining $W_{\text{web}}$ CPU share is physically isolated to separate web processes, the FastAPI API maintains full responsiveness to incoming health checks (`/` and `/info`) and liveness probes.
+- **Context-Switching Minimization**: By allocating precise numbers of workers directly proportional to $C$, we prevent CPU thrashing and excessive OS-level context switching, maximizing real hardware throughput.
+- **Isolated Lifespans**:
+  - Web workers run under a Gunicorn master process using `UvicornWorker` for async network I/O.
+  - Job workers run under the lightweight `pgq run` CLI, utilizing optimized `asyncpg` pools for ultra-low database polling latency.
+
+---
+
 ## Project Structure
 
 ```
