@@ -18,8 +18,8 @@ APP              := app.main:app
 HOST             ?= 0.0.0.0
 PORT             ?= 8000
 LOG_LEVEL        ?= info
-DATABASE_URL     ?= postgresql://postgres:postgres@localhost:5432/appdb
-REDIS_URL        ?= redis://localhost:6379/0
+DATABASE_URL     ?= postgresql://santa:santa@localhost:5432/santa
+REDIS_URL        ?= redis://:santa@localhost:6379/0
 SESSION_TTL_SECONDS ?= 86400
 
 # 60 % of cores → web, at least 1.
@@ -118,17 +118,8 @@ start-dev: $(PID_DIR)
 	$(DC) up -d --wait
 	@echo "[2/4] Ensuring pgqueuer schema exists …"
 	$(MAKE) --no-print-directory db-install
-	@echo "[3/4] Starting web server (hot-reload) → logs: $(DEV_WEB_LOG)"
-	nohup env DATABASE_URL=$(DATABASE_URL) REDIS_URL=$(REDIS_URL) SESSION_TTL_SECONDS=$(SESSION_TTL_SECONDS) \
-	$(UVICORN) $(APP) \
-	  --host $(HOST) --port $(PORT) \
-	  --reload --log-level $(LOG_LEVEL) \
-	  > $(DEV_WEB_LOG) 2>&1 & echo $$! > $(DEV_WEB_PID)
-	@echo "[4/4] Starting pgqueuer worker (debug) → logs: $(DEV_WORKER_LOG)"
-	nohup env PG_DSN=$(DATABASE_URL) REDIS_URL=$(REDIS_URL) SESSION_TTL_SECONDS=$(SESSION_TTL_SECONDS) \
-	$(PGQ) run $(PGQ_ENTRY) \
-	  --log-level debug \
-	  > $(DEV_WORKER_LOG) 2>&1 & echo $$! > $(DEV_WORKER_PID)
+	@DATABASE_URL=$(DATABASE_URL) REDIS_URL=$(REDIS_URL) SESSION_TTL_SECONDS=$(SESSION_TTL_SECONDS) \
+	nohup ./scripts/start_dev.sh >/dev/null 2>&1 </dev/null
 	@echo ""
 	@echo "  ✓  Dev stack is running!"
 	@echo "  API:  http://$(HOST):$(PORT)"
@@ -200,11 +191,11 @@ start-all: $(PID_DIR)
 	$(GUNICORN) $(APP) -c gunicorn.conf.py \
 	  --daemon --pid $(WEB_PID)
 	@echo "Starting pgqueuer worker in background …"
-	nohup env PG_DSN=$(DATABASE_URL) REDIS_URL=$(REDIS_URL) SESSION_TTL_SECONDS=$(SESSION_TTL_SECONDS) \
-	$(PGQ) run $(PGQ_ENTRY) \
+	PG_DSN=$(DATABASE_URL) REDIS_URL=$(REDIS_URL) SESSION_TTL_SECONDS=$(SESSION_TTL_SECONDS) \
+	nohup $(PGQ) run $(PGQ_ENTRY) \
 	  --log-level $(PGQ_LOG_LEVEL) \
 	  --shutdown-on-listener-failure \
-	  > /dev/null 2>&1 & echo $$! > $(WORKER_PID_FILE)
+	  > /dev/null 2>&1 </dev/null & echo $$! > $(WORKER_PID_FILE)
 	@echo "✓  Both processes running.  Use 'make status' to check."
 
 .PHONY: stop-all

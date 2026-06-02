@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
     db_url = (
         os.environ.get("DATABASE_URL")
         or os.environ.get("PG_DSN")
-        or "postgresql://postgres:postgres@localhost:5432/appdb"
+        or "postgresql://santa:santa@localhost:5432/santa"
     )
     pool: asyncpg.Pool = await asyncpg.create_pool(
         db_url,

@@ -26,7 +26,7 @@ _redis: aioredis.Redis | None = None
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-DEFAULT_REDIS_URL = "redis://localhost:6379/0"
+DEFAULT_REDIS_URL = "redis://:santa@localhost:6379/0"
 SESSION_TTL: int = int(os.environ.get("SESSION_TTL_SECONDS", 86_400))
 
 

@@ -44,9 +44,9 @@ async def main():
     database_url = (
         os.environ.get("DATABASE_URL")
         or os.environ.get("PG_DSN")
-        or "postgresql://postgres:postgres@localhost:5432/appdb"
+        or "postgresql://santa:santa@localhost:5432/santa"
     )
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    redis_url = os.environ.get("REDIS_URL", "redis://:santa@localhost:6379/0")
 
     pool: asyncpg.Pool = await asyncpg.create_pool(
         database_url,
