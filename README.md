@@ -77,7 +77,8 @@ For a system with a total count of CPU cores $C$:
 │   ├── __init__.py
 │   ├── main.py             # FastAPI application & route definitions
 │   ├── cache.py            # Redis connection pool lifecycle (one client per worker)
-│   └── sessions.py         # Chat session CRUD operations (Redis-backed)
+│   ├── sessions.py         # Chat session CRUD operations (Redis-backed)
+│   └── constants.py        # Centralized string keys, entrypoints, and pool configuration constants
 ├── tests/                  # pytest test suite
 │   ├── conftest.py         # asyncio_mode=auto, shared fixtures
 │   └── test_app.py         # Route-shape & integration tests (fully mocked)
@@ -96,7 +97,7 @@ For a system with a total count of CPU cores $C$:
 |---|---|---|
 | Python | ≥ 3.12 | Runtime |
 | [uv](https://docs.astral.sh/uv/) | latest | Package manager & task runner |
-| [Docker](https://docs.docker.com/get-docker/) | ≥ 24 | Dev infrastructure (Redis + PostgreSQL) |
+| [Docker](https://docs.docker.com/get-docker/) | ≥ 24 | Dev infrastructure (Redis latest alpine, Postgres 18-alpine) |
 
 Install uv:
 ```bash
@@ -142,8 +143,8 @@ If you already have Redis and PostgreSQL running locally, set the environment
 variables and start each piece separately:
 
 ```bash
-export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/appdb
-export REDIS_URL=redis://localhost:6379/0
+export DATABASE_URL=postgresql://santa:santa@localhost:5432/santa
+export REDIS_URL=redis://:santa@localhost:6379/0
 
 make install        # install Python deps
 make db-install     # create pgqueuer schema
@@ -174,8 +175,8 @@ make stop-all    # graceful shutdown
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/appdb` | PostgreSQL DSN (pgqueuer) |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis DSN (session store) |
+| `DATABASE_URL` | `postgresql://santa:santa@localhost:5432/santa` | PostgreSQL DSN (pgqueuer) |
+| `REDIS_URL` | `redis://:santa@localhost:6379/0` | Redis DSN (session store) |
 | `SESSION_TTL_SECONDS` | `86400` | Session TTL in seconds (24 h) |
 | `APP_ENV` | `development` | Shown in `/info` response |
 | `WEB_WORKERS` | 60% of CPU cores | Override Gunicorn worker count |
